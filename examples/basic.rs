@@ -1,8 +1,8 @@
-use attached::{Var, VarCtx};
+use attached::{var_ctx, Var, VarCtx};
 use static_init::dynamic;
 
 #[dynamic]
-static MY_ATTACHED_PROP: Var<i32> = Var::new();
+static MY_ATTACHED_PROP: Var<i32, MyCtx> = Var::new();
 
 fn main() {
     let my_extensible_struct = MyExtensibleStruct::default();
@@ -13,5 +13,7 @@ fn main() {
 
 #[derive(Default)]
 struct MyExtensibleStruct {
-    ctx: VarCtx,
+    ctx: VarCtx<MyCtx>,
 }
+
+var_ctx!(MyCtx);

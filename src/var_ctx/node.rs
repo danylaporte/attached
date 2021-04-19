@@ -1,16 +1,16 @@
 use super::{CellOpt, UntypedPtr};
-use crate::VARIABLE_COUNTER;
-use std::{cmp::max, sync::atomic::Ordering::Relaxed};
+use crate::VarCnt;
+use std::cmp::max;
 
-pub(super) struct Node {
+pub(super) struct Node<CTX> {
     list: Box<[CellOpt<UntypedPtr>]>,
+    node: CellOpt<Box<Node<CTX>>>,
     offset: usize,
-    node: CellOpt<Box<Node>>,
 }
 
-impl Node {
+impl<CTX: VarCnt> Node<CTX> {
     pub fn with_offset(offset: usize) -> Self {
-        let counter = VARIABLE_COUNTER.load(Relaxed);
+        let counter = CTX::var_cnt().cur();
         let len = max(counter.saturating_sub(offset), 256);
 
         let list = (0..len)
@@ -26,7 +26,7 @@ impl Node {
         }
     }
 
-    fn node_or_init<'a>(&self) -> &Node {
+    fn node_or_init<'a>(&self) -> &Node<CTX> {
         self.node.get().unwrap_or_else(|| {
             self.node
                 .replace(Some(new_node(self.offset, self.list.len())));
@@ -35,7 +35,7 @@ impl Node {
         })
     }
 
-    fn node_or_init_mut(&mut self) -> &mut Node {
+    fn node_or_init_mut(&mut self) -> &mut Node<CTX> {
         let o = self.node.get_mut();
 
         if o.is_none() {
@@ -79,6 +79,9 @@ impl Node {
 }
 
 #[inline]
-fn new_node(offset: usize, list_len: usize) -> Box<Node> {
+fn new_node<CTX>(offset: usize, list_len: usize) -> Box<Node<CTX>>
+where
+    CTX: VarCnt,
+{
     Box::new(Node::with_offset(offset + list_len))
 }

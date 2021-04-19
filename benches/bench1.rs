@@ -1,10 +1,10 @@
-use attached::{Var, VarCtx};
+use attached::{var_ctx, Var, VarCtx};
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use once_cell::sync::OnceCell;
 use static_init::dynamic;
 
 #[dynamic]
-static VAR1: Var<usize> = Var::new();
+static VAR1: Var<usize, CTX> = Var::new();
 
 fn criterion_benchmark(c: &mut Criterion) {
     let ctx = VarCtx::new();
@@ -23,3 +23,5 @@ fn criterion_benchmark(c: &mut Criterion) {
 
 criterion_group!(benches, criterion_benchmark);
 criterion_main!(benches);
+
+var_ctx!(CTX);

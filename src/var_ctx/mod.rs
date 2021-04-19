@@ -2,21 +2,31 @@ mod cell_opt;
 mod node;
 mod untyped_ptr;
 
+use crate::VarCnt;
 use cell_opt::CellOpt;
 use node::Node;
 use parking_lot::Mutex;
+use std::marker::PhantomData;
 use untyped_ptr::UntypedPtr;
 
-pub struct VarCtx {
+pub struct VarCtx<CTX> {
+    _ctx: PhantomData<CTX>,
     mutex: Mutex<()>,
-    node: Node,
+    node: Node<CTX>,
 }
 
-impl VarCtx {
+impl<CTX: VarCnt> VarCtx<CTX> {
     pub fn new() -> Self {
         Self {
+            _ctx: PhantomData,
             mutex: Mutex::new(()),
             node: Node::with_offset(0),
+        }
+    }
+
+    pub(crate) fn clear(&mut self, index: usize) {
+        if let Some(v) = self.node.slot_mut(index) {
+            *v.get_mut() = None;
         }
     }
 
@@ -79,11 +89,14 @@ impl VarCtx {
     }
 }
 
-impl Default for VarCtx {
+impl<CTX: VarCnt> Default for VarCtx<CTX> {
     fn default() -> Self {
         Self::new()
     }
 }
+
+unsafe impl<CTX> Send for VarCtx<CTX> {}
+unsafe impl<CTX> Sync for VarCtx<CTX> {}
 
 #[test]
 fn value_lifecycle() {
@@ -92,7 +105,9 @@ fn value_lifecycle() {
     static CREATE_COUNT: AtomicUsize = AtomicUsize::new(0);
     static DROP_COUNT: AtomicUsize = AtomicUsize::new(0);
 
-    let ctx = VarCtx::new();
+    var_ctx!(MY);
+
+    let ctx = VarCtx::<MY>::new();
 
     // values are lazy created. Nothing should be created yet.
     assert_eq!(CREATE_COUNT.load(Relaxed), 0);
