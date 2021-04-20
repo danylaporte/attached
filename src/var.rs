@@ -61,3 +61,10 @@ impl<CTX: VarCnt, T> Var<T, CTX> {
         ctx.replace(self.id, None)
     }
 }
+
+impl<CTX: VarCnt, T> Default for Var<T, CTX> {
+    #[inline]
+    fn default() -> Self {
+        Self::new()
+    }
+}
