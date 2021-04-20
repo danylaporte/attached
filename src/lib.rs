@@ -12,10 +12,10 @@ macro_rules! var_ctx {
     };
 }
 
+mod cnt;
+mod ctx;
 mod var;
-mod var_cnt;
-mod var_ctx;
 
+pub use cnt::{Cnt, VarCnt};
+pub use ctx::VarCtx;
 pub use var::Var;
-pub use var_cnt::{Cnt, VarCnt};
-pub use var_ctx::VarCtx;
