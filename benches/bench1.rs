@@ -11,10 +11,10 @@ fn criterion_benchmark(c: &mut Criterion) {
     let cell = OnceCell::new();
 
     c.bench_function("var::get_or_init", |b| {
-        b.iter(|| VAR1.get_or_init(black_box(&ctx), || 1usize))
+        b.iter(|| black_box(&ctx).get_or_init(&VAR1, || 1usize))
     });
 
-    c.bench_function("var::get", |b| b.iter(|| VAR1.get(black_box(&ctx))));
+    c.bench_function("var::get", |b| b.iter(|| black_box(&ctx).get(&VAR1)));
 
     c.bench_function("cell::get_or_init", |b| {
         b.iter(|| black_box(&cell).get_or_init(|| 1usize))

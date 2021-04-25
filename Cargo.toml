@@ -6,12 +6,11 @@ edition = "2018"
 publish = false
 
 [dependencies]
-parking_lot = "0.11"
+static_init = "1"
 
 [dev-dependencies]
 criterion = "0.3"
 once_cell = "1"
-static_init = "1"
 
 [[bench]]
 name = "bench1"

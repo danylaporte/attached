@@ -1,10 +1,12 @@
-use super::{CellOpt, UntypedPtr};
+use super::Slot;
 use crate::VarCnt;
-use std::cmp::max;
+use static_init::Lazy;
+use std::{cell::Cell, cmp::max, marker::PhantomData};
 
 pub(super) struct Node<CTX> {
-    list: Box<[CellOpt<UntypedPtr>]>,
-    node: CellOpt<Box<Node<CTX>>>,
+    _ctx: PhantomData<CTX>,
+    list: Box<[Slot]>,
+    node: Lazy<Box<Node<CTX>>, Cell<Option<Box<dyn FnOnce() -> Box<Node<CTX>>>>>>,
     offset: usize,
 }
 
@@ -15,73 +17,47 @@ impl<CTX: VarCnt> Node<CTX> {
 
         let list = (0..len)
             .into_iter()
-            .map(|_| CellOpt::new(None))
+            .map(|_| Slot::default())
             .collect::<Vec<_>>()
             .into_boxed_slice();
 
         Self {
+            _ctx: PhantomData,
             list,
-            node: CellOpt::new(None),
+            node: Lazy::new(Box::new(move || Box::new(Node::with_offset(offset + len)))),
             offset,
         }
     }
 
     fn node_or_init<'a>(&self) -> &Node<CTX> {
-        self.node.get().unwrap_or_else(|| {
-            self.node
-                .replace(Some(new_node(self.offset, self.list.len())));
-
-            self.node.get().unwrap()
-        })
+        &**Lazy::get(&self.node)
     }
 
-    fn node_or_init_mut(&mut self) -> &mut Node<CTX> {
-        let o = self.node.get_mut();
-
-        if o.is_none() {
-            *o = Some(new_node(self.offset, self.list.len()));
-        }
-
-        o.as_mut().unwrap()
-    }
-
-    #[inline]
-    pub fn slot(&self, index: usize) -> Option<&CellOpt<UntypedPtr>> {
+    pub fn slot(&self, index: usize) -> Option<&Slot> {
         self.list
             .get(index - self.offset)
-            .or_else(|| self.node.get().and_then(|v| v.slot(index)))
+            .or_else(|| Lazy::try_get(&self.node).ok().and_then(|v| v.slot(index)))
     }
 
-    pub fn slot_mut(&mut self, index: usize) -> Option<&mut CellOpt<UntypedPtr>> {
+    pub fn slot_mut(&mut self, index: usize) -> Option<&mut Slot> {
         let node = &mut self.node;
 
         self.list
             .get_mut(index - self.offset)
-            .or_else(move || node.get_mut().as_mut().and_then(|v| v.slot_mut(index)))
+            .or_else(move || Lazy::try_get_mut(node).ok().and_then(|v| v.slot_mut(index)))
     }
 
-    pub fn slot_or_init<'a>(&self, index: usize) -> &CellOpt<UntypedPtr> {
+    pub fn slot_or_init(&self, index: usize) -> &Slot {
         self.list
             .get(index - self.offset)
             .unwrap_or_else(|| self.node_or_init().slot_or_init(index))
     }
 
-    #[allow(dead_code)]
-    pub fn slot_or_init_mut(&mut self, index: usize) -> &mut CellOpt<UntypedPtr> {
-        let local_index = index - self.offset;
+    pub fn slot_or_init_mut(&mut self, index: usize) -> &mut Slot {
+        let node = &mut self.node;
 
-        if local_index < self.list.len() {
-            unsafe { self.list.get_unchecked_mut(local_index) }
-        } else {
-            self.node_or_init_mut().slot_or_init_mut(index)
-        }
+        self.list
+            .get_mut(index - self.offset)
+            .unwrap_or_else(move || Lazy::get_mut(node).slot_or_init_mut(index))
     }
-}
-
-#[inline]
-fn new_node<CTX>(offset: usize, list_len: usize) -> Box<Node<CTX>>
-where
-    CTX: VarCnt,
-{
-    Box::new(Node::with_offset(offset + list_len))
 }

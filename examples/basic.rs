@@ -6,7 +6,10 @@ static MY_ATTACHED_PROP: Var<i32, MyCtx> = Var::new();
 
 fn main() {
     let my_extensible_struct = MyExtensibleStruct::default();
-    let v = MY_ATTACHED_PROP.get_or_init(&my_extensible_struct.ctx, || 20);
+
+    let v = my_extensible_struct
+        .ctx
+        .get_or_init(&MY_ATTACHED_PROP, || 20);
 
     assert_eq!(*v, 20);
 }

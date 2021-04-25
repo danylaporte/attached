@@ -1,17 +1,13 @@
-mod cell_opt;
 mod node;
-mod untyped_ptr;
+mod slot;
 
-use crate::VarCnt;
-use cell_opt::CellOpt;
+use crate::{Var, VarCnt};
 use node::Node;
-use parking_lot::Mutex;
+use slot::Slot;
 use std::marker::PhantomData;
-use untyped_ptr::UntypedPtr;
 
 pub struct VarCtx<CTX> {
     _ctx: PhantomData<CTX>,
-    mutex: Mutex<()>,
     node: Node<CTX>,
 }
 
@@ -19,73 +15,54 @@ impl<CTX: VarCnt> VarCtx<CTX> {
     pub fn new() -> Self {
         Self {
             _ctx: PhantomData,
-            mutex: Mutex::new(()),
             node: Node::with_offset(0),
         }
     }
 
-    pub(crate) fn clear(&mut self, index: usize) {
-        if let Some(v) = self.node.slot_mut(index) {
-            *v.get_mut() = None;
-        }
+    pub fn clear<T: Sized>(&mut self, var: &'static Var<T, CTX>) {
+        self.node
+            .slot_mut(var.id)
+            .map(|v| v.replace::<T>(None, var.dropper()));
     }
 
-    #[inline]
-    pub(crate) fn get<T>(&self, index: usize) -> Option<&T> {
-        self.node
-            .slot(index)
-            .and_then(|slot| slot.get().map(|ptr| ptr.get()))
+    pub fn get<T: Sized>(&self, var: &'static Var<T, CTX>) -> Option<&T> {
+        self.node.slot(var.id).and_then(|slot| slot.get())
     }
 
-    #[inline]
-    pub(crate) fn get_mut<T>(&mut self, index: usize) -> Option<&mut T> {
-        self.node
-            .slot_mut(index)
-            .and_then(|slot| slot.get_mut().as_mut())
-            .map(|ptr| ptr.get_mut())
+    pub fn get_mut<T: Sized>(&mut self, var: &'static Var<T, CTX>) -> Option<&mut T> {
+        self.node.slot_mut(var.id).and_then(|slot| slot.get_mut())
     }
 
     /// call `get` method first; it's faster. If the value is not found then call `get_or_init`.
-    pub(crate) fn get_or_init<F, T>(&self, index: usize, init: F) -> &T
+    pub fn get_or_init<F, T: Sized>(&self, var: &'static Var<T, CTX>, init: F) -> &T
     where
         F: FnOnce() -> T,
     {
-        let _guard = self.mutex.lock();
-        let slot = self.node.slot_or_init(index);
+        let slot = self.node.slot_or_init(var.id);
 
-        slot.get()
-            .unwrap_or_else(|| {
-                slot.replace(Some(UntypedPtr::new(init())));
-                slot.get().unwrap()
-            })
-            .get()
+        slot.get().unwrap_or_else(|| {
+            let _ = slot.set(init(), var.dropper());
+            slot.get().unwrap()
+        })
     }
 
-    pub(crate) fn get_or_init_mut<F, T>(&mut self, index: usize, init: F) -> &mut T
+    pub fn get_or_init_mut<F, T: Sized>(&mut self, var: &'static Var<T, CTX>, init: F) -> &mut T
     where
         F: FnOnce() -> T,
     {
-        let slot = self.node.slot_or_init_mut(index);
+        let slot = self.node.slot_or_init_mut(var.id);
 
-        if slot.get().is_none() {
-            slot.replace(Some(UntypedPtr::new(init())));
+        if slot.get::<T>().is_none() {
+            slot.replace(Some(init()), var.dropper());
         }
 
-        slot.get_mut().as_mut().map(|ptr| ptr.get_mut()).unwrap()
+        slot.get_mut().unwrap()
     }
 
-    pub(crate) fn replace<T>(&mut self, index: usize, val: Option<T>) -> Option<T> {
-        match val {
-            Some(val) => self
-                .node
-                .slot_or_init_mut(index)
-                .replace(Some(UntypedPtr::new(val))),
-            None => self
-                .node
-                .slot_mut(index)
-                .and_then(|slot| slot.replace(None)),
-        }
-        .map(|ptr| ptr.into_inner())
+    pub fn replace<T: Sized>(&mut self, var: &'static Var<T, CTX>, val: Option<T>) -> Option<T> {
+        self.node
+            .slot_or_init_mut(var.id)
+            .replace(val, var.dropper())
     }
 }
 
@@ -107,18 +84,21 @@ fn value_lifecycle() {
 
     var_ctx!(MY);
 
+    #[static_init::dynamic]
+    static V: Var<LifeCheck, MY> = Var::new();
+
     let ctx = VarCtx::<MY>::new();
 
     // values are lazy created. Nothing should be created yet.
     assert_eq!(CREATE_COUNT.load(Relaxed), 0);
 
     // creates and keeps a reference to LifeCheck.
-    let _ = ctx.get_or_init(0, LifeCheck::default);
+    let _ = ctx.get_or_init(&V, LifeCheck::default);
     assert_eq!(CREATE_COUNT.load(Relaxed), 1);
     assert_eq!(DROP_COUNT.load(Relaxed), 0);
 
     // should get the same instance of LifeCheck
-    let _ = ctx.get_or_init(0, LifeCheck::default);
+    let _ = ctx.get_or_init(&V, LifeCheck::default);
     assert_eq!(CREATE_COUNT.load(Relaxed), 1);
     assert_eq!(DROP_COUNT.load(Relaxed), 0);
 
