@@ -1,10 +1,10 @@
-use attached::{var_ctx, Var, VarCtx};
+use attached::{var_ctx, Var, Vars};
 use static_init::dynamic;
 use std::sync::atomic::{AtomicUsize, Ordering::SeqCst};
 
 var_ctx!(C);
 
-type Ctx = VarCtx<C>;
+type Ctx = Vars<C>;
 
 #[dynamic]
 static V: Var<usize, C> = Default::default();
@@ -47,7 +47,7 @@ fn var_drop() {
 
     var_ctx!(L);
 
-    type Ctx = VarCtx<L>;
+    type Ctx = Vars<L>;
 
     #[dynamic]
     static V: Var<Dropper, L> = Default::default();
@@ -64,7 +64,7 @@ fn var_drop() {
 fn reentrant_init() {
     var_ctx!(L);
 
-    type Ctx = VarCtx<L>;
+    type Ctx = Vars<L>;
 
     #[dynamic]
     static V: Var<Box<i32>, L> = Var::new();

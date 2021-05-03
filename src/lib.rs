@@ -13,11 +13,11 @@ macro_rules! var_ctx {
 }
 
 mod cnt;
-mod ctx;
 mod dropper;
 mod var;
+mod vars;
 
 pub use cnt::{Cnt, VarCnt};
-pub use ctx::VarCtx;
 use dropper::*;
 pub use var::Var;
+pub use vars::Vars;

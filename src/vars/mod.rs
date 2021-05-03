@@ -6,15 +6,13 @@ use node::Node;
 use slot::Slot;
 use std::marker::PhantomData;
 
-pub struct VarCtx<CTX> {
-    _ctx: PhantomData<CTX>,
+pub struct Vars<CTX> {
     node: Node<CTX>,
 }
 
-impl<CTX: VarCnt> VarCtx<CTX> {
+impl<CTX: VarCnt> Vars<CTX> {
     pub fn new() -> Self {
         Self {
-            _ctx: PhantomData,
             node: Node::with_offset(0),
         }
     }
@@ -66,14 +64,14 @@ impl<CTX: VarCnt> VarCtx<CTX> {
     }
 }
 
-impl<CTX: VarCnt> Default for VarCtx<CTX> {
+impl<CTX: VarCnt> Default for Vars<CTX> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-unsafe impl<CTX> Send for VarCtx<CTX> {}
-unsafe impl<CTX> Sync for VarCtx<CTX> {}
+unsafe impl<CTX> Send for Vars<CTX> {}
+unsafe impl<CTX> Sync for Vars<CTX> {}
 
 #[test]
 fn value_lifecycle() {
@@ -87,7 +85,7 @@ fn value_lifecycle() {
     #[static_init::dynamic]
     static V: Var<LifeCheck, MY> = Var::new();
 
-    let ctx = VarCtx::<MY>::new();
+    let ctx = Vars::<MY>::new();
 
     // values are lazy created. Nothing should be created yet.
     assert_eq!(CREATE_COUNT.load(Relaxed), 0);

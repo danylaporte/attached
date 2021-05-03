@@ -1,4 +1,4 @@
-use attached::{var_ctx, Var, VarCtx};
+use attached::{var_ctx, Var, Vars};
 use static_init::dynamic;
 
 #[dynamic]
@@ -16,7 +16,7 @@ fn main() {
 
 #[derive(Default)]
 struct MyExtensibleStruct {
-    ctx: VarCtx<MyCtx>,
+    ctx: Vars<MyCtx>,
 }
 
 var_ctx!(MyCtx);
