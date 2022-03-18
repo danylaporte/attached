@@ -108,3 +108,16 @@ fn slot_drop() {
 }
 
 static NOOP_DROP: NoopDrop = NoopDrop;
+
+#[test]
+fn slot_get_mut() {
+    use crate::Dropper;
+
+    static DROPPER: Dropper<String> = Dropper::new();
+
+    let mut p = Slot::new(format!("Hello"), &DROPPER);
+
+    *p.get_mut::<String>().unwrap() += " world";
+
+    assert_eq!("Hello world", p.get_mut::<String>().unwrap());
+}

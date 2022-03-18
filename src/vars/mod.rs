@@ -4,7 +4,6 @@ mod slot;
 use crate::{Var, VarCnt};
 use node::Node;
 use slot::Slot;
-use std::marker::PhantomData;
 
 pub struct Vars<CTX> {
     node: Node<CTX>,

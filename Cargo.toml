@@ -2,7 +2,7 @@
 name = "attached"
 version = "0.1.0"
 authors = ["Dany Laporte <dany_laporte@hotmail.com>"]
-edition = "2018"
+edition = "2021"
 publish = false
 
 [dependencies]

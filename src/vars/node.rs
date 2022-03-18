@@ -6,9 +6,11 @@ use std::{cell::Cell, cmp::max, marker::PhantomData};
 pub(super) struct Node<CTX> {
     _ctx: PhantomData<CTX>,
     list: Box<[Slot]>,
-    node: Lazy<Box<Node<CTX>>, Cell<Option<Box<dyn FnOnce() -> Box<Node<CTX>>>>>>,
+    node: LazyNode<CTX>,
     offset: usize,
 }
+
+type LazyNode<C> = Lazy<Box<Node<C>>, Cell<Option<Box<dyn FnOnce() -> Box<Node<C>>>>>>;
 
 impl<CTX: VarCnt> Node<CTX> {
     pub fn with_offset(offset: usize) -> Self {
@@ -29,7 +31,7 @@ impl<CTX: VarCnt> Node<CTX> {
         }
     }
 
-    fn node_or_init<'a>(&self) -> &Node<CTX> {
+    fn node_or_init(&self) -> &Node<CTX> {
         &**Lazy::get(&self.node)
     }
 
