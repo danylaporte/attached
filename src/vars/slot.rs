@@ -115,7 +115,7 @@ fn slot_get_mut() {
 
     static DROPPER: Dropper<String> = Dropper::new();
 
-    let mut p = Slot::new(format!("Hello"), &DROPPER);
+    let mut p = Slot::new("Hello".to_string(), &DROPPER);
 
     *p.get_mut::<String>().unwrap() += " world";
 

@@ -41,34 +41,34 @@ fn check_no_allocate_after_multiple_get_or_init() {
 
     let stats = dhat::HeapStats::get();
 
-    assert_eq!(stats.curr_blocks, 2);
-    assert_eq!(stats.curr_bytes, 6160);
+    assert_eq!(stats.curr_blocks, 1);
+    assert_eq!(stats.curr_bytes, 6144);
 
     c.get_or_init(&V, || vec![0, 1, 2, 3, 4]);
 
     let stats = dhat::HeapStats::get();
 
-    assert_eq!(stats.curr_blocks, 4);
-    assert_eq!(stats.curr_bytes, 6189);
+    assert_eq!(stats.curr_blocks, 3);
+    assert_eq!(stats.curr_bytes, 6173);
 
     c.get_or_init(&V, || vec![0, 1, 2, 3, 4]);
 
     let stats = dhat::HeapStats::get();
 
-    assert_eq!(stats.curr_blocks, 4);
-    assert_eq!(stats.curr_bytes, 6189);
+    assert_eq!(stats.curr_blocks, 3);
+    assert_eq!(stats.curr_bytes, 6173);
 
     c.replace(&V, Some(vec![]));
 
     let stats = dhat::HeapStats::get();
 
-    assert_eq!(stats.curr_blocks, 3);
-    assert_eq!(stats.curr_bytes, 6184);
+    assert_eq!(stats.curr_blocks, 2);
+    assert_eq!(stats.curr_bytes, 6168);
 
     c.replace(&V, Some(vec![0, 1, 2, 3, 4]));
 
     let stats = dhat::HeapStats::get();
 
-    assert_eq!(stats.curr_blocks, 4);
-    assert_eq!(stats.curr_bytes, 6189);
+    assert_eq!(stats.curr_blocks, 3);
+    assert_eq!(stats.curr_bytes, 6173);
 }
