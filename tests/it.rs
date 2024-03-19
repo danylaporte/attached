@@ -1,36 +1,34 @@
-use attached::{var_ctx, Var, Vars};
-use static_init::dynamic;
+use attached::{container, var, Container};
 use std::sync::atomic::{AtomicUsize, Ordering::SeqCst};
 
-var_ctx!(C);
+container!(C);
 
-type Ctx = Vars<C>;
+type Ctx = Container<C>;
 
-#[dynamic]
-static V: Var<usize, C> = Default::default();
+var!(V: usize, C);
 
 #[test]
 fn var_get() {
     let c = Ctx::new();
 
-    assert!(c.get(&V).is_none());
-    c.get_or_init(&V, || 92);
+    assert!(c.get(*V).is_none());
+    c.get_or_init(*V, || 92);
 
-    assert_eq!(c.get(&V), Some(&92));
+    assert_eq!(c.get(*V), Some(&92));
 
-    c.get_or_init(&V, || panic!("Kabom!"));
-    assert_eq!(c.get(&V), Some(&92));
+    c.get_or_init(*V, || panic!("Kabom!"));
+    assert_eq!(c.get(*V), Some(&92));
 }
 
 #[test]
 fn var_get_mut() {
     let mut c = Ctx::new();
 
-    assert!(c.get_mut(&V).is_none());
-    assert!(c.replace(&V, Some(90)).is_none());
+    assert!(c.get_mut(*V).is_none());
+    assert!(c.replace(*V, Some(90)).is_none());
 
-    *c.get_mut(&V).unwrap() += 2;
-    assert_eq!(c.get_mut(&V), Some(&mut 92));
+    *c.get_mut(*V).unwrap() += 2;
+    assert_eq!(c.get_mut(*V), Some(&mut 92));
 }
 
 #[test]
@@ -45,16 +43,15 @@ fn var_drop() {
         }
     }
 
-    var_ctx!(L);
+    container!(L);
 
-    type Ctx = Vars<L>;
+    type Ctx = Container<L>;
 
-    #[dynamic]
-    static V: Var<Dropper, L> = Default::default();
+    var!(V: Dropper, L);
 
     let c = Ctx::new();
 
-    c.get_or_init(&V, || Dropper);
+    c.get_or_init(*V, || Dropper);
     assert_eq!(DROP_CNT.load(SeqCst), 0);
     drop(c);
     assert_eq!(DROP_CNT.load(SeqCst), 1);
@@ -62,17 +59,16 @@ fn var_drop() {
 
 #[test]
 fn reentrant_init() {
-    var_ctx!(L);
+    container!(L);
 
-    type Ctx = Vars<L>;
+    type Ctx = Container<L>;
 
-    #[dynamic]
-    static V: Var<Box<i32>, L> = Var::new();
+    var!(V: Box<i32>, L);
 
     let c = Ctx::new();
 
-    let v = c.get_or_init(&V, || {
-        c.get_or_init(&V, || Box::new(92));
+    let v = c.get_or_init(*V, || {
+        c.get_or_init(*V, || Box::new(92));
         Box::new(62)
     });
 

@@ -1,23 +1,37 @@
 #[macro_export]
-macro_rules! var_ctx {
+macro_rules! container {
     ($vis:vis $name:ident) => {
         $vis struct $name;
 
-        impl $crate::VarCnt for $name {
-            fn var_cnt() -> &'static $crate::Cnt {
-                static CNT: $crate::Cnt = $crate::Cnt::new();
-                &CNT
+        impl $crate::VarRegister for $name {
+            fn register() -> &'static $crate::Register {
+                static REGISTER: $crate::Register = $crate::Register::new();
+                &REGISTER
             }
         }
     };
 }
 
-mod cnt;
-mod dropper;
-mod var;
-mod vars;
+#[macro_export]
+macro_rules! var {
+    ($var_name:ident: $var_ty:ty, $ctx:ty) => {
+        #[$crate::static_init::dynamic]
+        static $var_name: $crate::Var<$var_ty, $ctx> = {
+            fn dropper(ptr: usize) {
+                $crate::from_usize::<$var_ty>(ptr);
+            }
 
-pub use cnt::{Cnt, VarCnt};
-use dropper::*;
+            $crate::Var::__new(&dropper)
+        };
+    };
+}
+
+mod container;
+mod register;
+mod var;
+
+pub use static_init;
+
+pub use container::{from_usize, Container};
+pub use register::{Register, VarRegister};
 pub use var::Var;
-pub use vars::Vars;

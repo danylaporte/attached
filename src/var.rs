@@ -1,33 +1,27 @@
-use crate::{
-    dropper::{DropVar, Dropper},
-    VarCnt,
-};
+use crate::VarRegister;
 use std::marker::PhantomData;
 
 pub struct Var<T: Sized, CTX> {
     pub(crate) id: usize,
     _ctx: PhantomData<CTX>,
-    dropper: Dropper<T>,
+    _t: PhantomData<T>,
 }
 
-impl<CTX: VarCnt, T: Sized> Var<T, CTX> {
-    #[inline]
-    pub fn new() -> Self {
+impl<CTX: VarRegister, T: Sized> Clone for Var<T, CTX> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<CTX: VarRegister, T: Sized> Copy for Var<T, CTX> {}
+
+impl<CTX: VarRegister, T: Sized> Var<T, CTX> {
+    #[doc(hidden)]
+    pub fn __new(dropper: &'static (dyn Fn(usize) + Sync)) -> Self {
         Self {
-            id: CTX::var_cnt().next(),
+            id: CTX::register().register(dropper),
             _ctx: PhantomData,
-            dropper: Dropper::new(),
+            _t: PhantomData,
         }
-    }
-
-    pub(crate) fn dropper(&'static self) -> &'static dyn DropVar {
-        &self.dropper
-    }
-}
-
-impl<CTX: VarCnt, T> Default for Var<T, CTX> {
-    #[inline]
-    fn default() -> Self {
-        Self::new()
     }
 }
