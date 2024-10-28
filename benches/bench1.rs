@@ -1,12 +1,12 @@
 use attached::{container, var, Container};
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use once_cell::sync::OnceCell;
+use std::sync::OnceLock;
 
 var!(VAR1: usize, CTX);
 
 fn criterion_benchmark(c: &mut Criterion) {
     let ctx = Container::new();
-    let cell = OnceCell::new();
+    let cell = OnceLock::new();
 
     c.bench_function("var::get_or_init", |b| {
         b.iter(|| black_box(&ctx).get_or_init(*VAR1, || 1usize))
