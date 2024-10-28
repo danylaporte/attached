@@ -15,7 +15,6 @@ impl<Ctx: VarRegister> Container<Ctx> {
         Self {
             _ctx: PhantomData,
             ptrs: (0..Ctx::register().count())
-                .into_iter()
                 .map(|_| AtomicUsize::new(0))
                 .collect::<Vec<_>>()
                 .into_boxed_slice(),
@@ -82,6 +81,21 @@ impl<Ctx: VarRegister> Container<Ctx> {
         }
 
         unsafe { &mut *(*v as *mut T) }
+    }
+
+    pub fn get_or_init_val<T: Sized>(&self, var: Var<T, Ctx>, val: T) -> (&T, Option<T>) {
+        let ptr = unsafe { self.ptrs.get_unchecked(var.id) };
+        let mut v = ptr.load(Relaxed);
+
+        if v == 0 {
+            v = into_usize(val);
+
+            if let Err(old) = ptr.compare_exchange_weak(0, v, Relaxed, Relaxed) {
+                return (unsafe { &*(old as *mut T) }, Some(from_usize::<T>(v)));
+            }
+        }
+
+        (unsafe { &*(v as *mut T) }, None)
     }
 
     pub fn replace<T: Sized>(&mut self, var: Var<T, Ctx>, val: Option<T>) -> Option<T> {

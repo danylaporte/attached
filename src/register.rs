@@ -28,3 +28,9 @@ impl Register {
         self.0.lock().expect("lock")
     }
 }
+
+impl Default for Register {
+    fn default() -> Self {
+        Self::new()
+    }
+}
