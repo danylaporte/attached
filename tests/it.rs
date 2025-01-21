@@ -25,7 +25,7 @@ fn var_get_mut() {
     let mut c = Ctx::new();
 
     assert!(c.get_mut(*V).is_none());
-    c.get_or_init(*V, || 90);
+    assert!(c.replace(*V, Some(90)).is_none());
 
     *c.get_mut(*V).unwrap() += 2;
     assert_eq!(c.get_mut(*V), Some(&mut 92));
@@ -57,20 +57,20 @@ fn var_drop() {
     assert_eq!(DROP_CNT.load(SeqCst), 1);
 }
 
-// #[test]
-// fn reentrant_init() {
-//     container!(L);
+#[test]
+fn reentrant_init() {
+    container!(L);
 
-//     type Ctx = Container<L>;
+    type Ctx = Container<L>;
 
-//     var!(V: Box<i32>, L);
+    var!(V: Box<i32>, L);
 
-//     let c = Ctx::new();
+    let c = Ctx::new();
 
-//     let v = c.get_or_init(*V, || {
-//         c.get_or_init(*V, || Box::new(92));
-//         Box::new(62)
-//     });
+    let v = c.get_or_init(*V, || {
+        c.get_or_init(*V, || Box::new(92));
+        Box::new(62)
+    });
 
-//     assert_eq!(**v, 92);
-// }
+    assert_eq!(**v, 92);
+}

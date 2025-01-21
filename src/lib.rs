@@ -30,7 +30,8 @@ mod container;
 mod register;
 mod var;
 
+pub use static_init;
+
 pub use container::{from_usize, Container};
 pub use register::{Register, VarRegister};
-pub use static_init;
 pub use var::Var;
